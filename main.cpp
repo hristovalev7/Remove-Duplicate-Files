@@ -4,11 +4,59 @@
 #include <wait.h>
 #include <unistd.h>
 
+#define parent pid > 0
+#define child pid == 0
+
 void argumentCheck(int argc)
 {
     if (argc != 2)
     {
         perror("Invalid number of arguments!");
+        exit(-1);
+    }
+}
+
+void removeFile(const char* fileName)
+{
+    int pid{fork()};
+    if (parent)
+    {
+        int status;
+        wait(&status);
+    }
+    else if (child)
+    {
+        execlp("rm", "rm", fileName, NULL);
+    }
+    else
+    {
+        perror("Couldn't fork!");
+        exit(-1);
+    }
+}
+
+void putHashInPipe(int pipeInner[2], int pipeOuter[2], const char* fileName)
+{
+    int pid{fork()};
+    if (parent)
+    {
+        close(pipeInner[1]);
+        close(pipeOuter[0]);
+        dup2(pipeInner[0], 0);
+        dup2(pipeOuter[1], 1);
+        int status;
+        wait(&status);
+        execlp("cut", "cut", "-d", " ", "-f", "1", NULL);
+    }
+    else if (child)
+    {
+        close(pipeInner[0]);
+        dup2(pipeInner[1], 1);
+        execlp("sha256sum", "sha256sum", fileName, NULL);
+    }
+    else
+    {
+        perror("Couldn't fork!");
         exit(-1);
     }
 }
@@ -29,66 +77,25 @@ int main(int argc, char** argv)
             int pipeOuter[2]{};
             pipe(pipeOuter);
             int pid{fork()};
-            if (pid > 0)
+            if (parent)
             {
                 int status;
                 wait(&status);
                 read(pipeOuter[0], &currentHash, 64);
-                if (!hashes.contains(currentHash))
+                if (hashes.contains(currentHash))
                 {
-                    std::string hash;
-                    for (int i{0}; i < 64; ++i)
-                    {
-                        hash.push_back(currentHash[i]);
-                    }
-                    hashes.emplace(hash);
+                    removeFile(currentFile->d_name);
                 }
                 else
                 {
-                    int pid2{fork()};
-                    if (pid2 > 0)
-                    {
-                        int status2;
-                        wait(&status2);
-                    }
-                    else if (pid2 == 0)
-                    {
-                        execlp("rm", "rm", currentFile->d_name, NULL);
-                    }
-                    else
-                    {
-                        perror("Couldn't fork!");
-                        exit(-1);
-                    }
+                    hashes.emplace(currentHash);
                 }
-
             }
-            else if (pid == 0)
+            else if (child)
             {
                 int pipeInner[2];
                 pipe(pipeInner);
-                int pid2{fork()};
-                if (pid2 > 0)
-                {
-                    close(pipeInner[1]);
-                    close(pipeOuter[0]);
-                    dup2(pipeInner[0], 0);
-                    dup2(pipeOuter[1], 1);
-                    int status2;
-                    wait(&status2);
-                    execlp("cut", "cut", "-d", " ", "-f", "1", NULL);
-                }
-                else if (pid2 == 0)
-                {
-                    close(pipeInner[0]);
-                    dup2(pipeInner[1], 1);
-                    execlp("sha256sum", "sha256sum", currentFile->d_name, NULL);
-                }
-                else
-                {
-                    perror("Couldn't fork!");
-                    exit(-1);
-                }
+                putHashInPipe(pipeInner, pipeOuter, currentFile->d_name);
             }
             else
             {
