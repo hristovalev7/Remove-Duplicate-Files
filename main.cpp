@@ -4,15 +4,25 @@
 #include <wait.h>
 #include <unistd.h>
 
+void argumentCheck(int argc)
+{
+    if (argc != 2)
+    {
+        perror("Invalid number of arguments!");
+        exit(-1);
+    }
+}
+
 int main(int argc, char** argv)
 {
+    argumentCheck(argc);
     const char* workingDirectory{argv[1]};
     chdir(workingDirectory);
     char currentHash[65]{};
     std::unordered_set<std::string> hashes;
     DIR* directoryStream{opendir(workingDirectory)};
     dirent* currentFile{readdir(directoryStream)};
-    while (currentFile != NULL)
+    while (currentFile != nullptr)
     {
         if (currentFile->d_type != DT_DIR)
         {
