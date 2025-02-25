@@ -1,5 +1,6 @@
 # Remove-Duplicate-Files
 A simple program that removes duplicate files in a given directory by calculating the SHA-256 sum of every file in the directory.
+Note: This project is purely for fun and learning. Yes, SHA-256 is overkill, but I wasn’t going for efficiency — I just wanted to get more comfortable with some Linux system calls like fork(), pipe(), etc.
 
 # How do I use this?
 ```
