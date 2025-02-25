@@ -18,7 +18,7 @@ Navigate to the directory where CMakeLists.txt and main.cpp are and exectue:
 cmake .
 ```
 ```
-make
+camke --build .
 ```
 ## Method 2 (Doesn't require CMake)
 Navigate to the directory where main.cpp is and exectue:
